@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1761564613772,
+      "tag": "0000_smooth_captain_universe",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1761564744303,
+      "tag": "0001_fast_namora",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1761567310717,
+      "tag": "0002_sharp_doomsday",
+      "breakpoints": true
+    }
+  ]
+}
