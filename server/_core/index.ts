@@ -1,14 +1,29 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// 🧭 Corrige __dirname (modo ESM)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 🔹 Carrega o .env da raiz
+dotenv.config({
+  path: path.resolve(__dirname, "../../.env"),
+});
+
+console.log("[DEBUG] OAUTH_SERVER_URL carregado:", process.env.OAUTH_SERVER_URL);
+
 import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
+import { registerOAuthRoutes } from "./oauth.js";
+import { systemRouter } from "./systemRouter.js";
+import { createContext } from "./context.js";
+import { serveStatic, setupVite } from "./vite.js";
 
-function isPortAvailable(port: number): Promise<boolean> {
+// 🔧 Testa se uma porta está livre
+function isPortAvailable(port) {
   return new Promise(resolve => {
     const server = net.createServer();
     server.listen(port, () => {
@@ -18,32 +33,36 @@ function isPortAvailable(port: number): Promise<boolean> {
   });
 }
 
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
+// 🔧 Busca automaticamente uma porta disponível
+async function findAvailablePort(startPort = 3000) {
   for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
+    if (await isPortAvailable(port)) return port;
   }
-  throw new Error(`No available port found starting from ${startPort}`);
+  throw new Error(`Nenhuma porta disponível a partir da ${startPort}`);
 }
 
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
+
+  if (!process.env.OAUTH_SERVER_URL) {
+    console.error("[ERRO] OAUTH_SERVER_URL não está configurado. Verifique o arquivo .env.");
+  }
+
   registerOAuthRoutes(app);
-  // tRPC API
+
+  // 🔥 Usa o systemRouter
   app.use(
     "/api/trpc",
     createExpressMiddleware({
-      router: appRouter,
+      router: systemRouter,
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
+
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
@@ -54,11 +73,11 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log(`⚠️ Porta ${preferredPort} ocupada, usando ${port} em vez dela`);
   }
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    console.log(`✅ Server rodando em: http://localhost:${port}/`);
   });
 }
 
